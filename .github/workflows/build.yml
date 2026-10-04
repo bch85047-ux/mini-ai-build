@@ -45,7 +45,7 @@ jobs:
       - name: Archive (unsigned)
         run: |
           cd mini-ai
-          xcodebuild -workspace MiniAIApp.xcworkspace \
+          xcodebuild -project MiniAIApp.xcodeproj \
             -scheme MiniAIApp \
             -configuration Release \
             -destination 'generic/platform=iOS' \

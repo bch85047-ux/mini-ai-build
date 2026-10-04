@@ -1,0 +1,78 @@
+name: Build MiniAI IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build-ipa:
+    runs-on: macos-15
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract source tarball
+        run: |
+          ls -la
+          tar -xzf mini-ai-v1.0.tar.gz
+          ls -la mini-ai/
+          cd mini-ai
+          ls -la
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Verify Xcode
+        run: |
+          xcodebuild -version
+          xcodebuild -showsdks
+
+      - name: Generate Xcode project
+        run: |
+          cd mini-ai
+          xcodegen generate
+          ls -la
+
+      - name: Write Export.plist
+        run: |
+          cd mini-ai
+          printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>' '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' '<plist version="1.0">' '<dict>' '<key>method</key>' '<string>development</string>' '<key>compileBitcode</key>' '<false/>' '<key>uploadSymbols</key>' '<false/>' '<key>signingStyle</key>' '<string>none</string>' '</dict>' '</plist>' > Export.plist
+          cat Export.plist
+
+      - name: Archive (unsigned)
+        run: |
+          cd mini-ai
+          xcodebuild -workspace MiniAIApp.xcworkspace \
+            -scheme MiniAIApp \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/MiniAI \
+            clean archive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Export unsigned IPA
+        run: |
+          cd mini-ai
+          mkdir -p dist
+          xcodebuild -exportArchive \
+            -archivePath build/MiniAI.xcarchive \
+            -exportOptionsPlist Export.plist \
+            -exportPath dist \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: MiniAI-unsigned.ipa
+          path: mini-ai/dist/*.ipa
+          retention-days: 7
+
+      - name: List output
+        run: ls -la mini-ai/dist/

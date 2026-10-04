@@ -60,7 +60,7 @@ jobs:
           cd mini-ai
           mkdir -p dist
           cd build/MiniAI.xcarchive/Products/Applications
-          zip -r ../../../dist/MiniAI.ipa MiniAIApp.app
+          zip -r ../../../../dist/MiniAI.ipa MiniAIApp.app
 
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4

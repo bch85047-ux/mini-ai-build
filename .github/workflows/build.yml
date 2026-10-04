@@ -55,17 +55,12 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Export unsigned IPA
+      - name: Package unsigned IPA
         run: |
           cd mini-ai
           mkdir -p dist
-          xcodebuild -exportArchive \
-            -archivePath build/MiniAI.xcarchive \
-            -exportOptionsPlist Export.plist \
-            -exportPath dist \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+          cd build/MiniAI.xcarchive/Products/Applications
+          zip -r ../../../dist/MiniAI.ipa MiniAIApp.app
 
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4

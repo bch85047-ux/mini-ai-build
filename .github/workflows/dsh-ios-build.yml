@@ -1,0 +1,62 @@
+name: Build dsh iOS IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'dsh-ios/**'
+
+jobs:
+  build-ipa:
+    runs-on: macos-15
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Verify Xcode
+        run: |
+          xcodebuild -version
+          xcodebuild -showsdks
+
+      - name: Generate Xcode project
+        run: |
+          cd dsh-ios
+          xcodegen generate
+          ls -la
+
+      - name: Archive (unsigned)
+        run: |
+          cd dsh-ios
+          xcodebuild -project dsh-ios.xcodeproj \
+            -scheme dsh \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/dsh \
+            clean archive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package unsigned IPA
+        run: |
+          cd dsh-ios
+          mkdir -p dist/Payload
+          cp -r build/dsh.xcarchive/Products/Applications/dsh.app dist/Payload/
+          cd dist
+          zip -r dsh.ipa Payload/
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh.ipa
+          path: dsh-ios/dist/*.ipa
+          retention-days: 7
+
+      - name: List output
+        run: ls -la dsh-ios/dist/

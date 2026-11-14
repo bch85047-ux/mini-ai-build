@@ -1,0 +1,53 @@
+name: Build DSH Full App (iSH + dsh)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'dsh-app-src/**'
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone iSH (with submodules)
+        run: |
+          git clone --recursive https://github.com/ish-app/ish.git ish-src
+          cd ish-src
+
+      - name: Apply DSH customizations
+        run: |
+          cp dsh-app-src/Roots.m ish-src/app/Roots.m
+          cp dsh-app-src/Roots.h ish-src/app/Roots.h
+
+      - name: Build iSH kernel + app
+        run: |
+          cd ish-src
+          # iSH 用 xcodegen 生成工程
+          brew install xcodegen
+          xcodegen generate
+          xcodebuild -project iSH.xcodeproj -scheme iSH \
+            -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/dsh \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
+            archive
+
+      - name: Rename + package
+        run: |
+          cd ish-src
+          APP=build/dsh.xcarchive/Products/Applications/iSH.app
+          mkdir -p dist/Payload
+          cp -r $APP dist/Payload/DSH.app
+          cd dist
+          zip -qry dsh.ipa Payload
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh-full.ipa
+          path: ish-src/dist/dsh.ipa

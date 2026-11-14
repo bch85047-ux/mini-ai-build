@@ -24,6 +24,11 @@ jobs:
           cp dsh-app-src/Roots.m ish-src/app/Roots.m
           cp dsh-app-src/Roots.h ish-src/app/Roots.h
 
+      - name: Install build deps
+        run: |
+          brew install meson ninja python3
+          pip3 install --user meson ninja
+
       - name: Build iSH kernel + app
         run: |
           cd ish-src

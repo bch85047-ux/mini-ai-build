@@ -33,10 +33,12 @@ jobs:
           meson --version && ninja --version
 
       - name: Build iSH kernel + app
+        env:
+          PATH: /opt/homebrew/opt/llvm/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
         run: |
           cd ish-src
+          which clang lld ld.lld || true
           ls *.xcodeproj
-          xcodebuild -list -project iSH.xcodeproj | head -30
           xcodebuild -project iSH.xcodeproj -scheme iSH \
             -configuration Release -sdk iphoneos \
             -destination 'generic/platform=iOS' \

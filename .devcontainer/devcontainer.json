@@ -1,0 +1,9 @@
+{
+  "name": "dsh-server",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-24-bookworm",
+  "postStartCommand": "nohup npx -y @deepseek-ai/dsh@0.2.2-rc.3 web --port 3080 --host 0.0.0.0 --no-open > /tmp/dsh.log 2>&1 &",
+  "forwardPorts": [3080],
+  "portsAttributes": {
+    "3080": { "label": "dsh web", "onAutoForward": "notify" }
+  }
+}

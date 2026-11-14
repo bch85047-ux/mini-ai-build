@@ -31,7 +31,6 @@ jobs:
           echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib" >> $GITHUB_ENV
           echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV
           meson --version && ninja --version
-          ls /opt/homebrew/opt/llvm/bin/ld64.lld /opt/homebrew/opt/llvm/bin/lld
 
       - name: Build iSH kernel + app
         run: |

@@ -27,9 +27,8 @@ jobs:
       - name: Build iSH kernel + app
         run: |
           cd ish-src
-          # iSH 用 xcodegen 生成工程
-          brew install xcodegen
-          xcodegen generate
+          ls *.xcodeproj
+          xcodebuild -list -project iSH.xcodeproj | head -30
           xcodebuild -project iSH.xcodeproj -scheme iSH \
             -configuration Release -sdk iphoneos \
             -destination 'generic/platform=iOS' \

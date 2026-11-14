@@ -26,7 +26,7 @@ jobs:
 
       - name: Install build deps
         run: |
-          brew install meson ninja llvm
+          brew install llvm lld ninja libarchive meson
           echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
           echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib" >> $GITHUB_ENV
           echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV

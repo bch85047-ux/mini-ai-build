@@ -26,8 +26,8 @@ jobs:
 
       - name: Install build deps
         run: |
-          brew install meson ninja python3
-          pip3 install --user meson ninja
+          brew install meson ninja
+          meson --version && ninja --version
 
       - name: Build iSH kernel + app
         run: |

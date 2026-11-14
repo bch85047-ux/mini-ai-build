@@ -25,7 +25,7 @@ static NSURL *RootsDir(void) {
     return rootsDir;
 }
 
-static NSString *kDefaultRoot = @"dsh-root";
+static NSString *kDefaultRoot = @"Default Root";
 
 @interface Roots ()
 @property NSMutableOrderedSet<NSString *> *roots;
@@ -35,12 +35,11 @@ static NSString *kDefaultRoot = @"dsh-root";
 @end
 
 
-#pragma mark - DSH Rootfs Download
+#pragma mark - DSH rootfs download helpers
 
 static NSString *const DSHRootfsVersion = @"1.0";
 static NSArray<NSString *> *DSHRootfsParts(void) {
-    return @[@"rv2.part_aa",@"rv2.part_ab",@"rv2.part_ac",
-             @"rv2.part_ad",@"rv2.part_ae"];
+    return @[@"rv2.part_aa",@"rv2.part_ab",@"rv2.part_ac",@"rv2.part_ad",@"rv2.part_ae"];
 }
 static NSString *DSHRootfsBaseURL(void) {
     return @"https://github.com/bch85047-ux/mini-ai-build/releases/download/dsh-rootfs/";
@@ -61,19 +60,27 @@ static BOOL DSHNeedsDownload(void) {
     NSString *v = [[NSString stringWithContentsOfFile:DSHVersionPath encoding:NSUTF8StringEncoding error:nil] stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
     return ![v isEqualToString:DSHRootfsVersion];
 }
-static NSError *DSHMergeParts(void) {
+static NSError * _Nullable DSHDownloadRootfs(void) {
+    for (NSString *part in DSHRootfsParts()) {
+        NSString *url = [DSHRootfsBaseURL() stringByAppendingString:part];
+        NSString *dst = [DSHPartsDir() stringByAppendingPathComponent:part];
+        [[NSFileManager defaultManager] removeItemAtPath:dst error:nil];
+        NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:url]];
+        if (!data) return [NSError errorWithDomain:@"DSH" code:2 userInfo:@{NSLocalizedDescriptionKey:[@"下载失败 " stringByAppendingString:part]}];
+        if (![data writeToFile:dst atomically:YES]) return [NSError errorWithDomain:@"DSH" code:3 userInfo:@{NSLocalizedDescriptionKey:[@"写入失败 " stringByAppendingString:part]}];
+    }
+    // merge
     NSString *out = DSHRootfsArchivePath();
     [[NSFileManager defaultManager] removeItemAtPath:out error:nil];
+    [[NSFileManager defaultManager] createFileAtPath:out contents:nil attributes:nil];
     NSFileHandle *fh = [NSFileHandle fileHandleForWritingAtPath:out];
-    if (!fh) { [[NSFileManager defaultManager] createFileAtPath:out contents:nil attributes:nil]; fh = [NSFileHandle fileHandleForWritingAtPath:out]; }
-    for (NSString *p in DSHRootfsParts()) {
-        NSData *d = [NSData dataWithContentsOfFile:[DSHPartsDir() stringByAppendingPathComponent:p]];
-        if (!d) { [fh closeFile]; return [NSError errorWithDomain:@"DSH" code:1 userInfo:@{NSLocalizedDescriptionKey:[@"缺分块 " stringByAppendingString:p]}]; }
+    for (NSString *part in DSHRootfsParts()) {
+        NSData *d = [NSData dataWithContentsOfFile:[DSHPartsDir() stringByAppendingPathComponent:part]];
         [fh writeData:d];
     }
     [fh closeFile];
-    [DSHRootfsVersion writeToFile:DSHVersionPath atomically:YES encoding:NSUTF8StringEncoding error:nil];
-    for (NSString *p in DSHRootfsParts()) [[NSFileManager defaultManager] removeItemAtPath:[DSHPartsDir() stringByAppendingPathComponent:p] error:nil];
+    [DSHRootfsVersion writeToFile:DSHVersionPath() atomically:YES encoding:NSUTF8StringEncoding error:nil];
+    for (NSString *part in DSHRootfsParts()) [[NSFileManager defaultManager] removeItemAtPath:[DSHPartsDir() stringByAppendingPathComponent:part] error:nil];
     return nil;
 }
 
@@ -86,24 +93,14 @@ static NSError *DSHMergeParts(void) {
         NSAssert(error == nil, @"couldn't list roots: %@", error);
         self.roots = [rootNames mutableCopy];
         if (!self.roots.count) {
-            // DSH：从 GitHub Release 下载完整 dsh rootfs（6 分块）
+            // DSH: 下载完整 dsh rootfs 并导入
             NSError *error = nil;
-            NSString *archive = DSHRootfsArchivePath();
             if (DSHNeedsDownload()) {
-                // 下载全部 6 个分块
-                for (NSString *part in DSHRootfsParts()) {
-                    NSString *url = [DSHRootfsBaseURL() stringByAppendingString:part];
-                    NSString *dst = [DSHPartsDir() stringByAppendingPathComponent:part];
-                    [[NSFileManager defaultManager] removeItemAtPath:dst error:nil];
-                    NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:url]];
-                    if (!data) { error = [NSError errorWithDomain:@"DSH" code:2 userInfo:@{NSLocalizedDescriptionKey:[@"下载失败 " stringByAppendingString:part]}]; break; }
-                    [data writeToFile:dst atomically:YES];
-                }
-                if (!error) error = DSHMergeParts();
+                error = DSHDownloadRootfs();
             }
             NSAssert(error == nil, @"dsh rootfs download failed: %@", error);
-            if (![self importRootFromArchive:[NSURL fileURLWithPath:archive]
-                                        name:kDefaultRoot
+            if (![self importRootFromArchive:[NSURL fileURLWithPath:DSHRootfsArchivePath()]
+                                        name:@"dsh-root"
                                        error:&error
                             progressReporter:nil]) {
                 NSAssert(NO, @"failed to import dsh rootfs, error %@", error);

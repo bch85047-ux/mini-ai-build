@@ -57,7 +57,7 @@ static NSString *DSHVersionPath(void) {
 }
 static BOOL DSHNeedsDownload(void) {
     if (![[NSFileManager defaultManager] fileExistsAtPath:DSHRootfsArchivePath()]) return YES;
-    NSString *v = [[NSString stringWithContentsOfFile:DSHVersionPath encoding:NSUTF8StringEncoding error:nil] stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+    NSString *v = [[NSString stringWithContentsOfFile:DSHVersionPath() encoding:NSUTF8StringEncoding error:nil] stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
     return ![v isEqualToString:DSHRootfsVersion];
 }
 static NSError * _Nullable DSHDownloadRootfs(void) {
